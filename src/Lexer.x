@@ -1,6 +1,6 @@
 {
 {-# OPTIONS_GHC -w #-}
-module Lexer (lexer, AnnotToken(..), Token(..)) where
+module Lexer (lexer, AnnotToken(..), Token(..),LexPos(..)) where
 
 import LexerUtils
 }
@@ -33,6 +33,7 @@ $white+         ;
 "record"        { emit T_Record   }
 "type"          { emit T_Type     }
 "if"            { emit T_If       }
+"of"            { emit T_Of       }
 "case"          { emit T_Case     }
 
 "="             { emit T_Eq       }
@@ -46,6 +47,7 @@ $white+         ;
 "->"            { emit T_Arrow_R  }
 "<-"            { emit T_Arrow_L  }
 "::"            { emit T_ColCol   }
+"\"             { emit T_BackSlash }
 
 @num2           { emit T_Num2     }
 @num8           { emit T_Num8     }

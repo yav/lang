@@ -12,6 +12,7 @@ testFile file =
   do txt <- readFile file
      let tokens = lexer txt
      mapM_ (putStrLn . tokenText) tokens
+     putStrLn "----------------"
 
      case parseExpr tokens of
        Left err -> putStrLn err

@@ -14,14 +14,15 @@ data Token =
   | T_Record
   | T_Type
   | T_If
-  | T_Case
   | T_Of
+  | T_Case
 
   | T_Eq
   | T_Bar
   | T_Comma
   | T_DotDot
   | T_ColCol
+  | T_BackSlash
   | T_Paren_L
   | T_Paren_R
   | T_Brace_L
@@ -43,21 +44,19 @@ data Token =
   | T_Virt_Sep
 
   | T_Err
-    deriving Show
+    deriving (Eq,Show)
 
 --------------------------------------------------------------------------------
 
 layout :: [AnnotToken] -> [AnnotToken]
-layout = go [-1]
+layout = go []
   where
   col (LexPos _ _ c) = c
   colOf = col . tokenPosn
 
-  virt x t = Token { tokenText = "", tokenPosn = tokenPosn t, tokenType = x }
-  eof = LexPos (-1) (-1) (-1)
-
-  doesNotClose _ []       = True
-  doesNotClose t (c : _)  = colOf t > c
+  virt x t  = Token { tokenText = "(" ++ show x ++ ")"
+                    , tokenPosn = tokenPosn t, tokenType = x }
+  eof       = LexPos (-1) (-1) (-1)
 
   go stack ts
 
@@ -67,26 +66,17 @@ layout = go [-1]
     , colOf t1 < c
     = virt T_Virt_R t1 : go cs ts
 
-    -- Start: token after @of@ or @if@.
+    -- Start: token after @if@, or @\\@.
     | t1 : t2 : more <- ts
-    , tok            <- tokenType t1
-    , tok == T_Of || tok == T_If
-    , doesNotClose t2 stack
+    , t              <- tokenType t1
+    , t == T_If || t == T_Of
     = t1 : virt T_Virt_L t1 : t2 : go (colOf t2 : stack) more
 
-    -- Start: A bar in a layout block that is more indented than the block
-    | t1 : more      <- ts
-    , T_Bar          <- tokenType t1
-    , c : _          <- stack
-    , d              <- colOf t1
-    , d > c
-    = virt T_Virt_L t1 : t1 : go (d : stack) more
-
     -- Sep: same indentation as the current block
-    | t1 : _        <- ts
+    | t1 : more     <- ts
     , c : cs        <- stack
     , colOf t1 == c
-    = virt T_Virt_Sep t1 : t1 : go cs ts
+    = virt T_Virt_Sep t1 : t1 : go (c : cs) more
 
     -- Pass through
     | t1 : more      <- ts
@@ -94,7 +84,7 @@ layout = go [-1]
 
     -- End: end of file closes all open layout blocks
     | otherwise
-    = [ Token { tokenText = ""
+    = [ Token { tokenText = "(T_Virt_R)"
               , tokenPosn = eof
               , tokenType = T_Virt_R } | x <- stack ]
 

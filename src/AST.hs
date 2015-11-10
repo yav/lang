@@ -4,7 +4,7 @@ data Module   = Module
                   { modName     :: Name
                   , modImports  :: () --XXX
                   , modTDecls   :: [TDecl]
-                  , modDecls    :: Decl
+                  , modDecls    :: [FunBind]
                   } deriving Show
 
 
@@ -18,19 +18,22 @@ tFunName      = ConName "->"
 data Expr     = EVar Name
               | ELit Literal
 
-              | ELam Alt
+              | ELam [Alt]
               | EApp Expr Expr
 
-              | ELet Decl Expr
+              | ELet [LocalBind] Expr
               | EHasType Expr Type
 
-              | EIf Alt
+              | EIf Match
+              | ECase [Expr] [Alt]
 
               | ERec Name [ (Name, Maybe Expr) ] PRec
                 -- ^ Record values
 
               | EUpd Name Expr [ (Name, Maybe Expr) ]
                 -- ^ Update a record: @MyRec { e | x = 10 }@
+
+              | ETuple [Expr]   -- ^ Not 1
 
                 deriving Show
 
@@ -53,6 +56,7 @@ data Pat      = PVar Name
               | PCon Name [Pat]
               | PRec Name [ (Name, Maybe Pat) ] PRec
               | PHasType Pat Type
+              | PTuple [Pat]  -- ^ Not 1
               | PLit Literal
                 deriving Show
 
@@ -61,23 +65,23 @@ data PGuard   = GPat  Pat Expr
               | GBool Expr
                 deriving Show
 
-data Alt      = PArg Pat Alt
+data Match    = MDone Expr
+              | MMatch PGuard Match
+              | MFail
+              | MOr Match Match
+                deriving Show
 
-              | PDone Expr
-              | PMatch PGuard Alt
-
-              | PFail
-              | POr Alt Alt
+data Alt      = Alt [Pat] Match
                 deriving Show
 
 
+data LocalBind  = BPat Pat Expr
+                | BFun FunBind
 
-data Decl     = DEmpty
-              | DAnd Decl Decl
-              | DRec Decl
-              | DBind Pat Expr
-              | DLocal Decl Decl
-                deriving Show
+
+data FunBind  = Fun Name [Pat] Expr
+
+
 
 
 data Type     = TApp Type Type
