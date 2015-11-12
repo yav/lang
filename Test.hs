@@ -10,13 +10,10 @@ main = mapM_ testFile =<< getArgs
 testFile :: FilePath -> IO ()
 testFile file =
   do txt <- readFile file
-     let tokens = lexer txt
-     mapM_ (putStrLn . tokenText) tokens
-     putStrLn "----------------"
-
-     case parseExpr tokens of
+     let tokens = lexer True txt
+     case parseModule tokens of
        Left err -> putStrLn err
-       Right a  -> putStrLn (ppShow a)
+       Right a  -> putStrLn (ppShow (a (ConName "TheModule")))
 
 
 

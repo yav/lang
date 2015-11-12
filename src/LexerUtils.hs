@@ -16,19 +16,22 @@ data Token =
   | T_If
   | T_Of
   | T_Case
+  | T_Where
 
   | T_Eq
   | T_Bar
   | T_Comma
-  | T_DotDot
   | T_ColCol
   | T_BackSlash
+  | T_DotDot
+  | T_Under
   | T_Paren_L
   | T_Paren_R
   | T_Brace_L
   | T_Brace_R
   | T_Arrow_L
   | T_Arrow_R
+  | T_FatArrow_R
 
   | T_Con
   | T_Id
@@ -48,15 +51,26 @@ data Token =
 
 --------------------------------------------------------------------------------
 
-layout :: [AnnotToken] -> [AnnotToken]
-layout = go []
+layout :: Bool -> [AnnotToken] -> [AnnotToken]
+layout inBlock ts0
+  | inBlock   = case ts0 of
+                  t : ts -> virt T_Virt_L t : t : go [colOf t] ts
+                  []     -> [ virtAt T_Virt_L start, virtAt T_Virt_R eof ]
+
+  | otherwise = go [] ts0
   where
   col (LexPos _ _ c) = c
-  colOf = col . tokenPosn
+  colOf     = col . tokenPosn
 
-  virt x t  = Token { tokenText = "(" ++ show x ++ ")"
-                    , tokenPosn = tokenPosn t, tokenType = x }
-  eof       = LexPos (-1) (-1) (-1)
+  virtAt x p  = Token { tokenText = "(" ++ show x ++ ")"
+                    , tokenPosn = p, tokenType = x }
+
+  virt x t    = virtAt x (tokenPosn t)
+
+  eof         = LexPos (-1) (-1) (-1)
+  start       = LexPos 0 0 0
+
+
 
   go stack ts
 
@@ -66,10 +80,10 @@ layout = go []
     , colOf t1 < c
     = virt T_Virt_R t1 : go cs ts
 
-    -- Start: token after @if@, or @\\@.
+    -- Start: token after @if@, @of@, of @where@.
     | t1 : t2 : more <- ts
     , t              <- tokenType t1
-    , t == T_If || t == T_Of
+    , t == T_If || t == T_Of || t == T_Where
     = t1 : virt T_Virt_L t1 : t2 : go (colOf t2 : stack) more
 
     -- Sep: same indentation as the current block
@@ -84,10 +98,5 @@ layout = go []
 
     -- End: end of file closes all open layout blocks
     | otherwise
-    = [ Token { tokenText = "(T_Virt_R)"
-              , tokenPosn = eof
-              , tokenType = T_Virt_R } | x <- stack ]
-
-
-
+    = [ virtAt T_Virt_R eof | _ <- stack ]
 
